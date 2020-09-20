@@ -16,7 +16,7 @@ namespace NavagisInternalTool.Credentials
     public class AppFlowMetadata : FlowMetadata
     {
         private static int _settingRecordID = Convert.ToInt32(WebConfigurationManager.AppSettings["DBDefaultSettingID"]);
-        private static Setting _setting = new ApplicationDBContext().Setting.SingleOrDefault(s => s.Id == _settingRecordID);
+        private static Setting _setting = new ApplicationDBContext().Settings.SingleOrDefault(s => s.Id == _settingRecordID);
 
         private static readonly IAuthorizationCodeFlow flow =
             new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
@@ -28,8 +28,9 @@ namespace NavagisInternalTool.Credentials
                 },
                 Scopes = new[] 
                 {
-                    CloudResourceManagerService.Scope.CloudPlatformReadOnly,
-                    CloudResourceManagerService.Scope.CloudPlatform
+                    // CloudResourceManagerService.Scope.CloudPlatformReadOnly,
+                    CloudResourceManagerService.Scope.CloudPlatform,
+                    "email"
                 },
                 DataStore = new FileDataStore("NavagisInternalTool")
             });

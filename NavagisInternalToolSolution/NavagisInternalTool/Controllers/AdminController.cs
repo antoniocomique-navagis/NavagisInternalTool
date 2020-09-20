@@ -3,25 +3,27 @@ using System.Linq;
 using System.Web.Configuration;
 using System.Web.Mvc;
 using NavagisInternalTool.Models;
+using NavagisInternalTool.Credentials;
+using System.Data.Entity;
 
 namespace NavagisInternalTool.Controllers
 {
     public class AdminController : Controller
     {
-        private ApplicationDBContext _applicationDBContext;
+        private ApplicationDBContext db;
         private int _settingRecordID;
         private string _isLogedIn;
 
         public AdminController()
         {
-            _applicationDBContext = new ApplicationDBContext();
+            db = new ApplicationDBContext();
             _settingRecordID = Convert.ToInt32(WebConfigurationManager.AppSettings["DBDefaultSettingID"]);
             _isLogedIn = "Yes";
         }
 
         protected override void Dispose(bool disposing)
         {
-            _applicationDBContext.Dispose();
+            db.Dispose();
         }
 
         public ActionResult Login()
@@ -29,20 +31,34 @@ namespace NavagisInternalTool.Controllers
             return View();
         }
 
+        public ActionResult Index()
+        {
+            if(Session["isLogedIn"] == _isLogedIn)
+                return RedirectToAction("Index", "Clients");
+            else
+                return RedirectToAction("Login", "Admin");
+        }
+
+        public ActionResult Logout()
+        {
+            Session["isLogedIn"] = "No";
+            return RedirectToAction("Login", "Admin");
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Login(User user)
+        public ActionResult Login(AdminUser user)
         {
             if (!ModelState.IsValid)
-                return View("Register", user);
+                return View(user);
 
-            var _userInDb = _applicationDBContext.Users.SingleOrDefault(u => u.Username == user.Username && u.Password == user.Password);
+            var _userInDb = db.AdminUsers.SingleOrDefault(u => u.Username == user.Username && u.Password == user.Password);
 
             if (_userInDb != null)
             {
                 Session["Username"] = user.Username;
                 Session["isLogedIn"] = _isLogedIn;
-                return RedirectToAction("Setting", "Admin");
+                return RedirectToAction("Index", "Clients");
             }
 
             ViewBag.Message = "Invalid username or password.";
@@ -50,94 +66,36 @@ namespace NavagisInternalTool.Controllers
             return View(user);
         }
 
-        public ActionResult Users()
+        [AdminRequiresAuthentication]
+        public ActionResult profile()
         {
-            if (Session["isLogedIn"] != _isLogedIn)
-                return RedirectToAction("Login", "Admin");
-
-            return View(_applicationDBContext.Users.ToList());
+            var Username = Session["Username"];
+            var adminUser = db.AdminUsers.SingleOrDefault(s => s.Username == Username);
+            return View(adminUser);
         }
 
-        [HttpGet]
-        public ActionResult Register()
+        [AdminRequiresAuthentication]
+        public ActionResult Edit(int? id)
         {
-            if (Session["isLogedIn"] != _isLogedIn)
-                return RedirectToAction("Login", "Admin");
-
-            return View();
+            var Username = Session["Username"];
+            var adminUser = db.AdminUsers.SingleOrDefault(s => s.Username == Username);
+            return View(adminUser);
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Register(User user)
+        [AdminRequiresAuthentication]
+        public ActionResult Edit([Bind(Include = "Id,Username,Password,FirstName,LastName,IsAdmin")] AdminUser adminUser)
         {
-            var isSuccess = 0;
-            if (!ModelState.IsValid)
-                return View("Register", user);
-
-            ModelState.Clear();
-            _applicationDBContext.Users.Add(user);
-
-            try
+            if (ModelState.IsValid)
             {
-                isSuccess = _applicationDBContext.SaveChanges();
-                ViewBag.Message = user.Username + " successfully registered.";
+                Session["Username"] = adminUser.Username;
+                db.Entry(adminUser).State = EntityState.Modified;
+                db.SaveChanges();
+                return RedirectToAction("profile");
             }
-            catch (Exception)
-            {
-                ViewBag.Message = "The '" + user.Username + "' for username field is already used.";
-            }
-
-            if (isSuccess == 0)
-                return View("Register", user);
-
-            return RedirectToAction("Users", "Admin");
-        }
-
-        [HttpGet]
-        public ActionResult Delete(int Id)
-        {
-            if (Session["isLogedIn"] != _isLogedIn)
-                return RedirectToAction("Login", "Admin");
-                
-
-            var _userInDb = _applicationDBContext.Users.SingleOrDefault(u=>u.Id==Id);
-
-            if (_userInDb != null)
-            {
-                _applicationDBContext.Users.Remove(_userInDb);
-                _applicationDBContext.SaveChanges();
-            }
-            return RedirectToAction("Users", "Admin");
-        }
-
-        // GET: Admin
-        public ActionResult Setting()
-        {
-            if (Session["isLogedIn"] != _isLogedIn)
-                return RedirectToAction("Login", "Admin");
-
-            var settingInDB = _applicationDBContext.Setting.SingleOrDefault(s => s.Id == _settingRecordID);
-            return View(settingInDB);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Setting(Setting setting)
-        {
-            if (!ModelState.IsValid)
-                return View("Setting",setting);
-
-            var settingInDB = _applicationDBContext.Setting.SingleOrDefault(s => s.Id == _settingRecordID);
-
-            settingInDB.ClientId = setting.ClientId;
-            settingInDB.ClientSecret = setting.ClientSecret;
-            settingInDB.BillingAccountName = setting.BillingAccountName;
-            _applicationDBContext.SaveChanges();
-
-            Session["Message"] = "Setting is successfully updated.";
-
-            return RedirectToAction("Setting", "Admin");
+            return View(adminUser);
         }
     }
 }

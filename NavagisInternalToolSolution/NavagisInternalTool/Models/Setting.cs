@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-
 namespace NavagisInternalTool.Models
 {
     public class Setting
@@ -17,9 +16,11 @@ namespace NavagisInternalTool.Models
         [Display(Name = "Client Secret")]
         public string ClientSecret { get; set; }
 
+        
         [Required]
         [StringLength(255)]
-        [Display(Name = "Billing Account Name")]
-        public string BillingAccountName { get; set; }
+        [Display(Name = "Service Account Email")]
+        public string ServiceAccountEmail { get; set; }
+
     }
 }

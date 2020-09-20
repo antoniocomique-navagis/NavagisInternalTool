@@ -22,7 +22,7 @@
                     @foreach (var project in Model)
                     {
                         <tr class="@project.TableTrClass">
-                            <td><input type="radio" name="CategoryId" value="@project.ProjectId" @project.TableRadioButton /></td>
+                            <td><input type="radio" name="projectName" value="@project.ProjectId" @project.TableRadioButton /></td>
                             <td>@project.ProjectId</td>
                             <td>@project.Name</td>
                             <td>@project.LifecycleState</td>
